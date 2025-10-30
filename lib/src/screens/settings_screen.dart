@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
-
-import '../widgets/app_scaffold.dart';
+import '../ui/ui.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
+    return AppShell(
       title: 'Settings',
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Text('Settings placeholder'),
-          ],
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          PageHeader(title: 'Settings', subtitle: 'Application preferences'),
+          const SizedBox(height: 12),
+          ThemeToggle(),
+          const SizedBox(height: 8),
+          const Text('Other settings will appear here'),
+        ],
       ),
     );
   }

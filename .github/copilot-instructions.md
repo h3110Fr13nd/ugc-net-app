@@ -51,6 +51,8 @@ Files to watch (high-value files and docs):
 - `pubspec.yaml` and `analysis_options.yaml` — dependencies and linting rules.
 - `scripts/` (future) — data importers and automation scripts; watch for CLI patterns and sample data.
 - `backend/` (future) — FastAPI or backend service; watch for API contracts and model changes.
+- `backend/` — backend service has its own dedicated Copilot instructions at `backend/.github/copilot-instructions.md`. Consult that file for FastAPI-specific workflows, DB/migration guidance, and backend branch/PR practices.
 - `build/` and platform folders — generated files should be left untouched (android/, ios/, linux/, macos/, windows/, web/). Treat these as generated artifacts.
 
+NOTE: DO NOT CREATE SUMMARY FILES AFTER FINISHING A TASK, UNLESS SPECIFICALLY INSTRUCTED. AND ONLY ADD SUMMARY FILES IN docs/copilot DIRECTORY.
 When editing, prefer to update `docs/roadmap.md` and `docs/idea.md` before making large architectural changes so reviewers have context.

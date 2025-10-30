@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/app_state.dart';
 import '../widgets/question_card.dart';
-import '../widgets/app_scaffold.dart';
+import '../ui/ui.dart';
 
 class PracticeScreen extends StatelessWidget {
   const PracticeScreen({super.key});
@@ -12,7 +12,7 @@ class PracticeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = context.watch<MyAppState>();
 
-    return AppScaffold(
+    return AppShell(
       title: 'Practice',
       child: appState.isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -23,16 +23,16 @@ class PracticeScreen extends StatelessWidget {
                     child: QuestionCard(question: appState.currentQuestion!),
                   )
                 else
-                  Expanded(child: Center(child: Text('No questions loaded'))),
+                  const Expanded(child: Center(child: Text('No questions loaded'))),
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    ElevatedButton(
+                    PrimaryButton(
                       onPressed: () => appState.loadQuestions(limit: 10),
                       child: const Text('Load 10 Questions'),
                     ),
-                    ElevatedButton(
+                    PrimaryButton(
                       onPressed: () => Navigator.pushNamed(context, '/stats'),
                       child: const Text('View Stats'),
                     ),

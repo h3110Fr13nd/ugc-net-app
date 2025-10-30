@@ -17,7 +17,7 @@ class OptionTile extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           decoration: BoxDecoration(
-            color: isSelected ? Theme.of(context).colorScheme.primary.withOpacity(0.08) : null,
+            color: isSelected ? Theme.of(context).colorScheme.primary.withAlpha(20) : null,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.grey.shade300),
           ),

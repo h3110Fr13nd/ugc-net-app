@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'header.dart';
-
 class AppScaffold extends StatelessWidget {
   final String title;
   final Widget child;

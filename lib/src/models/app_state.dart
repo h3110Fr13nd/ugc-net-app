@@ -1,10 +1,75 @@
 import 'package:english_words/english_words.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../models/question.dart';
 import '../services/mock_api.dart';
 
 class MyAppState extends ChangeNotifier {
   var current = WordPair.random();
+
+  // Theme: default dark
+  bool _darkMode = true;
+
+  // Auth state
+  String? _accessToken;
+  Map<String, dynamic>? _user;
+
+  bool get darkMode => _darkMode;
+
+  String? get accessToken => _accessToken;
+
+  Map<String, dynamic>? get user => _user;
+
+  bool get isSignedIn => _accessToken != null;
+
+  void toggleTheme() {
+    _darkMode = !_darkMode;
+    _savePrefs();
+    notifyListeners();
+  }
+
+  MyAppState() {
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    _darkMode = prefs.getBool('darkMode') ?? true;
+    _accessToken = prefs.getString('app_token');
+    final u = prefs.getString('app_user');
+    if (u != null) {
+      try {
+        _user = json.decode(u) as Map<String, dynamic>;
+      } catch (e) {
+        _user = null;
+      }
+    }
+    notifyListeners();
+  }
+
+  Future<void> _savePrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('darkMode', _darkMode);
+  }
+
+  Future<void> setAuth(String token, Map<String, dynamic> user) async {
+    _accessToken = token;
+    _user = user;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('app_token', token);
+    await prefs.setString('app_user', json.encode(user));
+    notifyListeners();
+  }
+
+  Future<void> clearAuth() async {
+    _accessToken = null;
+    _user = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('app_token');
+    await prefs.remove('app_user');
+    notifyListeners();
+  }
 
   final MockApi _api = MockApi();
 
