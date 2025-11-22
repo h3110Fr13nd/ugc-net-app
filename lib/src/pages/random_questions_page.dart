@@ -15,32 +15,51 @@ class RandomQuestionsPage extends StatefulWidget {
 class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
   List<CompositeQuestion> _questions = [];
   bool _isLoading = false;
+  bool _isLoadingMore = false;
   String? _error;
+  int _currentPage = 1;
+  final int _pageSize = 20;
+  bool _hasMore = true;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _loadRandomQuestions();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.8) {
+      if (!_isLoadingMore && _hasMore) {
+        _loadMoreQuestions();
+      }
+    }
   }
 
   Future<void> _loadRandomQuestions() async {
     setState(() {
       _isLoading = true;
       _error = null;
+      _currentPage = 1;
+      _hasMore = true;
     });
 
     try {
       final questionService = QuestionService();
-      // Load questions without any taxonomy filter to get random questions
-      // The API will return questions in database order, which is effectively random
-      final questions = await questionService.listQuestions(
-        limit: 20, // Load 20 random questions
-      );
+      final questions = await questionService.listQuestions(page: _currentPage, pageSize: _pageSize);
 
       if (mounted) {
         setState(() {
           _questions = questions;
           _isLoading = false;
+          _hasMore = questions.length >= _pageSize;
         });
       }
     } catch (e) {
@@ -48,6 +67,37 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
         setState(() {
           _error = e.toString();
           _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadMoreQuestions() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final questionService = QuestionService();
+      final newQuestions = await questionService.listQuestions(
+        page: _currentPage + 1,
+        pageSize: _pageSize,
+      );
+
+      if (mounted) {
+        setState(() {
+          _questions.addAll(newQuestions);
+          _currentPage++;
+          _isLoadingMore = false;
+          _hasMore = newQuestions.length >= _pageSize;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
         });
       }
     }
@@ -100,8 +150,17 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
     }
 
     return ListView.builder(
-      itemCount: _questions.length,
+      controller: _scrollController,
+      itemCount: _questions.length + (_isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index >= _questions.length) {
+          // Loading indicator at the bottom
+          return const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        
         final question = _questions[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
@@ -116,9 +175,8 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
               CompositeQuestionCard(
                 question: question,
                 onAnswerSubmit: (selectedOptions) {
-                  // Handle answer submission
-                  final appState = context.read<MyAppState>();
-                  appState.submitCurrentAttempt(selectedOptions);
+                  // Answer submission for random questions
+                  // Could be implemented later if needed
                 },
               ),
             ],
@@ -129,8 +187,36 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
   }
 
   Widget _buildTaxonomyBreadcrumbs(CompositeQuestion question) {
-    final taxonomyPaths = question.metadata['taxonomy_paths'];
-    if (taxonomyPaths == null || taxonomyPaths is! List || taxonomyPaths.isEmpty) {
+    final taxonomyPathsRaw = question.metadata['taxonomy_paths'];
+    if (taxonomyPathsRaw == null) {
+      return const SizedBox.shrink();
+    }
+    
+    // Convert to List<String> - handle ListJsonObject by converting via JSON
+    final List<String> taxonomyPaths = [];
+    try {
+      // Convert to JSON and back to get a proper List
+      final jsonStr = taxonomyPathsRaw.toString();
+      // If it's already a string representation like "[item1, item2]", parse it
+      // Otherwise, just treat each element
+      if (taxonomyPathsRaw is List) {
+        for (var item in taxonomyPathsRaw) {
+          taxonomyPaths.add(item.toString());
+        }
+      } else {
+        // For ListJsonObject, convert to string and extract items
+        // The toString() should give us something like "[item1, item2]"
+        final str = jsonStr.substring(1, jsonStr.length - 1); // Remove [ and ]
+        if (str.isNotEmpty) {
+          taxonomyPaths.add(str); // For now, just add the whole string as one path
+        }
+      }
+    } catch (e) {
+      print('DEBUG Failed to convert taxonomy paths: $e');
+      return const SizedBox.shrink();
+    }
+    
+    if (taxonomyPaths.isEmpty) {
       return const SizedBox.shrink();
     }
 
