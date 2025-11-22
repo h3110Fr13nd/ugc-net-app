@@ -38,6 +38,7 @@ Keep guidance short, concrete, and tied to this repository's structure.
   - Keep changes minimal and focused per PR (one logical change per branch).
   - Don't modify native platform signing files or local.properties.
   - Preserve generated files under `build/` and platform `flutter/` generated folders.
+  - Always verify the backend API endpoints and the exact response/request schema before using them in client code. Check `backend/app/api/v1/` router files and `backend/app/db/models.py` for canonical field names, types, and any snapshot/versioning behavior. Do not assume field names or JSON shapes without checking the backend first.
 
 - If tests fail after edits, run `flutter test --no-pub` to get fast feedback; run `flutter pub get` if dependencies changed.
 
@@ -50,8 +51,8 @@ Files to watch (high-value files and docs):
 - `lib/main.dart` and `test/widget_test.dart` — canonical app flow and example test.
 - `pubspec.yaml` and `analysis_options.yaml` — dependencies and linting rules.
 - `scripts/` (future) — data importers and automation scripts; watch for CLI patterns and sample data.
-- `backend/` (future) — FastAPI or backend service; watch for API contracts and model changes.
-- `backend/` — backend service has its own dedicated Copilot instructions at `backend/.github/copilot-instructions.md`. Consult that file for FastAPI-specific workflows, DB/migration guidance, and backend branch/PR practices.
+- `../backend/` (future) — FastAPI or backend service; watch for API contracts and model changes.
+- `../backend/` — backend service has its own dedicated Copilot instructions at `../backend/.github/copilot-instructions.md`. Consult that file for FastAPI-specific workflows, DB/migration guidance, and backend branch/PR practices.
 - `build/` and platform folders — generated files should be left untouched (android/, ios/, linux/, macos/, windows/, web/). Treat these as generated artifacts.
 
 NOTE: DO NOT CREATE SUMMARY FILES AFTER FINISHING A TASK, UNLESS SPECIFICALLY INSTRUCTED. AND ONLY ADD SUMMARY FILES IN docs/copilot DIRECTORY.

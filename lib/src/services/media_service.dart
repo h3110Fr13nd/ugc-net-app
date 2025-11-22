@@ -6,12 +6,13 @@ import 'dart:convert';
 import 'package:path/path.dart' as path;
 import '../models/composite_question.dart';
 import 'api_client.dart';
+import 'api_factory.dart';
 
 /// Service for uploading and managing media files
 class MediaService {
   final ApiClient _client;
 
-  MediaService(this._client);
+  MediaService([ApiClient? client]) : _client = client ?? ApiFactory.getClient();
 
   /// Detect MIME type from file extension
   String _detectMimeType(String filePath) {

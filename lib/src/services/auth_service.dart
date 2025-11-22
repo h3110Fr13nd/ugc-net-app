@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'api_client.dart';
+import 'secure_storage_service.dart';
+import 'package:http/http.dart' as http;
 
 class AuthService {
   final ApiClient _client;
@@ -21,6 +23,50 @@ class AuthService {
           serverClientId: serverClientIdParam,
         );
 
+  final SecureStorageService _secure = SecureStorageService();
+
+  Future<void> _storeRefreshTokenFromResponse(http.Response res) async {
+    try {
+      final sc = res.headers['set-cookie'];
+      if (sc == null) return;
+      final m = RegExp(r'refresh_token=([^;]+)').firstMatch(sc);
+      if (m != null && m.groupCount >= 1) {
+        final token = Uri.decodeComponent(m.group(1)!);
+        await _secure.saveRefreshToken(token);
+      }
+    } catch (e) {
+      // non-fatal; do not block login flow on storage failures
+      // ignore: avoid_print
+      print('Failed to persist refresh token: $e');
+    }
+  }
+
+  /// Attempt to refresh the access token using the stored refresh token.
+  /// Returns a map with keys from the backend response (e.g., access_token) or an error map.
+  Future<Map<String, dynamic>> refresh() async {
+    try {
+      final stored = await _secure.readRefreshToken();
+      if (stored == null) return {'error': 'no_refresh_token'};
+
+      // Send cookie header manually as the backend reads refresh_token from cookies.
+      final res = await _client.post('/auth/refresh', headers: {
+        'Content-Type': 'application/json',
+        'Cookie': 'refresh_token=${Uri.encodeComponent(stored)}',
+      });
+
+      if (res.statusCode == 200) {
+        // Persist rotated refresh token if Set-Cookie present
+        await _storeRefreshTokenFromResponse(res);
+        final body = json.decode(res.body) as Map<String, dynamic>;
+        return body;
+      }
+
+      return {'error': 'refresh_failed', 'status': res.statusCode, 'body': res.body};
+    } catch (e) {
+      return {'error': 'exception', 'message': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> register({
     required String email,
     required String password,
@@ -36,6 +82,8 @@ class AuthService {
       }),
     );
     if (res.statusCode == 200) {
+      // Persist refresh token (backend sets it via Set-Cookie)
+      await _storeRefreshTokenFromResponse(res);
       return _client.decode(res.body);
     }
     final errorBody = json.decode(res.body) as Map<String, dynamic>?;
@@ -53,6 +101,8 @@ class AuthService {
       body: json.encode({'email': email, 'password': password}),
     );
     if (res.statusCode == 200) {
+      // Persist refresh token (backend sets it via Set-Cookie)
+      await _storeRefreshTokenFromResponse(res);
       return _client.decode(res.body);
     }
     final errorBody = json.decode(res.body) as Map<String, dynamic>?;
@@ -124,8 +174,8 @@ class AuthService {
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'id_token': idToken}),
       );
-
       if (res.statusCode == 200) {
+        await _storeRefreshTokenFromResponse(res);
         return json.decode(res.body) as Map<String, dynamic>;
       }
 

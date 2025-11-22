@@ -2,8 +2,9 @@ import 'package:english_words/english_words.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import '../models/question.dart';
-import '../services/mock_api.dart';
+import '../models/composite_question.dart';
+import '../services/question_service.dart';
+import '../services/auth_service.dart';
 
 class MyAppState extends ChangeNotifier {
   var current = WordPair.random();
@@ -62,6 +63,31 @@ class MyAppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Set only the access token (used after refresh) and persist it.
+  Future<void> setAccessToken(String token) async {
+    _accessToken = token;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('app_token', token);
+    notifyListeners();
+  }
+
+  /// Try to refresh access token using AuthService and stored refresh token.
+  /// Returns true if refresh succeeded and token updated.
+  Future<bool> tryRefresh() async {
+    try {
+      final auth = AuthService();
+      final res = await auth.refresh();
+      if (res.containsKey('access_token')) {
+        final token = res['access_token'] as String;
+        await setAccessToken(token);
+        return true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> clearAuth() async {
     _accessToken = null;
     _user = null;
@@ -71,23 +97,31 @@ class MyAppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  final MockApi _api = MockApi();
+  // final MockApi _api = MockApi(); // Removed
+  final QuestionService _service = QuestionService();
 
   // Practice mode state
-  List<Question> _questions = [];
+  List<CompositeQuestion> _questions = [];
   int _currentIndex = 0;
   bool _loading = false;
 
   // Public getters
-  List<Question> get questions => List.unmodifiable(_questions);
+  List<CompositeQuestion> get questions => List.unmodifiable(_questions);
   int get currentIndex => _currentIndex;
-  Question? get currentQuestion => _questions.isNotEmpty ? _questions[_currentIndex] : null;
+  CompositeQuestion? get currentQuestion => _questions.isNotEmpty ? _questions[_currentIndex] : null;
   bool get isLoading => _loading;
 
   Future<void> loadQuestions({int limit = 10}) async {
     _loading = true;
     notifyListeners();
-    _questions = await _api.fetchQuestions(limit: limit);
+    try {
+      // Use searchQuestions to get a list of questions. 
+      // Ideally we'd have a random fetch, but for now just fetch first page or search.
+      _questions = await _service.searchQuestions(pageSize: limit);
+    } catch (e) {
+      print('Error loading questions: $e');
+      _questions = [];
+    }
     _currentIndex = 0;
     _loading = false;
     notifyListeners();
@@ -96,17 +130,35 @@ class MyAppState extends ChangeNotifier {
   Future<Map<String, dynamic>> submitCurrentAttempt(String selected) async {
     final q = currentQuestion;
     if (q == null) return {'error': 'no question'};
-    final res = await _api.submitAttempt(q.id ?? 0, selected);
+    
+    // Stub submission for now as API doesn't have a direct submit endpoint yet
+    // We can check correctness locally if the question has correct answer info
+    bool correct = false;
+    String explanation = 'Answer recorded locally.';
+    
+    try {
+      final selectedOption = q.options.firstWhere((o) => o.id == selected);
+      correct = selectedOption.isCorrect;
+      if (correct) {
+        explanation = 'Correct!';
+      } else {
+        explanation = 'Incorrect.';
+      }
+    } catch (_) {
+      // Option not found or other error
+    }
+
     // advance to next question automatically if available
     if (_currentIndex < _questions.length - 1) {
       _currentIndex += 1;
     }
     notifyListeners();
-    return res;
+    return {'correct': correct, 'explanation': explanation};
   }
 
   Future<Map<String, dynamic>> fetchStats() async {
-    return await _api.stats();
+    // Stub stats
+    return {'total': 0, 'correct': 0, 'topicCorrect': {}};
   }
 
   void next() {

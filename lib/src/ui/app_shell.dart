@@ -69,6 +69,22 @@ class AppShell extends StatelessWidget {
                   Navigator.pushNamed(context, '/pages/quizzes');
                 },
               ),
+              ListTile(
+                leading: const Icon(Icons.category),
+                title: const Text('Topics'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/pages/topics');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.shuffle),
+                title: const Text('Random Questions'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/pages/random-questions');
+                },
+              ),
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.settings),

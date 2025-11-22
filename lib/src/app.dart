@@ -13,6 +13,7 @@ import 'ui/ui.dart';
 // Pages (modular index)
 import 'pages/pages_index.dart';
 import 'pages/authentication_page.dart';
+import 'pages/splash_page.dart';
 import 'pages/dashboard_page.dart';
 import 'pages/quizzes_list_page.dart';
 import 'pages/quiz_detail_page.dart';
@@ -38,6 +39,7 @@ import 'pages/versioning_history_page.dart';
 import 'pages/sitemap_page.dart';
 import 'pages/ux_qa_page.dart';
 import 'pages/composite_questions_demo.dart';
+import 'pages/random_questions_page.dart';
 
 class MyApp extends StatelessWidget {
   final MyAppState? initialState;
@@ -54,7 +56,7 @@ class MyApp extends StatelessWidget {
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
           themeMode: appState.darkMode ? ThemeMode.dark : ThemeMode.light,
-          home: appState.isSignedIn ? const HomeScreen() : const AuthenticationPage(),
+          home: const SplashPage(),
           routes: {
             '/home': (context) => const HomeScreen(),
             '/settings': (context) => const SettingsScreen(),
@@ -73,6 +75,7 @@ class MyApp extends StatelessWidget {
             '/pages/options_editor': (context) => const OptionsEditorPage(),
             '/pages/media_manager': (context) => const MediaManagerPage(),
             '/pages/topics': (context) => const TopicsPage(),
+            '/pages/random-questions': (context) => const RandomQuestionsPage(),
             '/pages/question_banks': (context) => const QuestionBanksPage(),
             '/pages/quiz_attempt': (context) => const QuizAttemptPage(),
             '/pages/attempt_review': (context) => const AttemptReviewPage(),

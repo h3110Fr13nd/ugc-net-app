@@ -49,3 +49,15 @@ app.*.map.json
 # OAuth credentials
 client_secret*.json
 client_secret_*.json
+
+# Flutter metadata
+.flutter-plugins-dependencies
+.metadata
+
+# Generated API code
+lib/generated_api/
+
+# Documentation
+docs/openapi.json
+docs/backend_api_spec.md
+docs/implementation_plan.md

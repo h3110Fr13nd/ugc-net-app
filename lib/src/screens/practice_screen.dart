@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/app_state.dart';
-import '../widgets/question_card.dart';
+import '../widgets/composite_question_card.dart';
 import '../ui/ui.dart';
 
 class PracticeScreen extends StatelessWidget {
@@ -20,7 +20,18 @@ class PracticeScreen extends StatelessWidget {
               children: [
                 if (appState.currentQuestion != null)
                   Expanded(
-                    child: QuestionCard(question: appState.currentQuestion!),
+                    child: SingleChildScrollView(
+                      child: CompositeQuestionCard(
+                        question: appState.currentQuestion!,
+                        isInteractive: true,
+                        onAnswerSubmit: (selectedIds) {
+                          // For now assuming single select for practice
+                          if (selectedIds.isNotEmpty) {
+                            appState.submitCurrentAttempt(selectedIds.first);
+                          }
+                        },
+                      ),
+                    ),
                   )
                 else
                   const Expanded(child: Center(child: Text('No questions loaded'))),
