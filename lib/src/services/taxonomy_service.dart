@@ -9,9 +9,7 @@ class TaxonomyService {
   /// Returns the taxonomy tree (top-level nodes with nested children).
   Future<List<TaxonomyNode>> getTaxonomyTree() async {
     final resp = await _api.getTaxonomyTreeApiV1TaxonomyTreeGet();
-    final data = resp.data;
-    if (data == null) return [];
-    // `data` is a BuiltList<TaxonomyTreeResponse>
-    return data.map((e) => TaxonomyNode.fromApi(e)).toList();
+    if (resp == null) return [];
+    return resp.map((e) => TaxonomyNode.fromApi(e)).toList();
   }
 }

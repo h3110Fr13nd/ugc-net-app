@@ -221,9 +221,11 @@ class _CompositeQuestionCardState extends State<CompositeQuestionCard> {
               // Option parts
               Expanded(
                 child: option.parts.isNotEmpty
-                    ? PartsListRenderer(
-                        optionParts: option.parts,
-                        spacing: 8,
+                    ? IgnorePointer(
+                        child: PartsListRenderer(
+                          optionParts: option.parts,
+                          spacing: 8,
+                        ),
                       )
                     : const Text('(No content)'),
               ),

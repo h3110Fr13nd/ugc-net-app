@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../models/app_state.dart';
 import '../models/composite_question.dart';
 import '../services/question_service.dart';
+import '../services/answer_submission_service.dart';
+import '../widgets/explanation_sheet.dart';
 import '../widgets/composite_question_card.dart';
 
 class RandomQuestionsPage extends StatefulWidget {
@@ -20,6 +22,7 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
   int _currentPage = 1;
   final int _pageSize = 20;
   bool _hasMore = true;
+  bool _unattemptedOnly = false;
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -53,7 +56,12 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
 
     try {
       final questionService = QuestionService();
-      final questions = await questionService.listQuestions(page: _currentPage, pageSize: _pageSize);
+      final questions = await questionService.listQuestions(
+        page: _currentPage, 
+        pageSize: _pageSize,
+        status: _unattemptedOnly ? 'unattempted' : null,
+        randomize: true,
+      );
 
       if (mounted) {
         setState(() {
@@ -84,6 +92,8 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
       final newQuestions = await questionService.listQuestions(
         page: _currentPage + 1,
         pageSize: _pageSize,
+        status: _unattemptedOnly ? 'unattempted' : null,
+        randomize: true,
       );
 
       if (mounted) {
@@ -109,6 +119,16 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
       appBar: AppBar(
         title: const Text('Random Questions'),
         actions: [
+          IconButton(
+            icon: Icon(_unattemptedOnly ? Icons.filter_alt : Icons.filter_alt_outlined),
+            onPressed: () {
+              setState(() {
+                _unattemptedOnly = !_unattemptedOnly;
+              });
+              _loadRandomQuestions();
+            },
+            tooltip: _unattemptedOnly ? 'Show all questions' : 'Show unattempted only',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _isLoading ? null : _loadRandomQuestions,
@@ -175,8 +195,7 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
               CompositeQuestionCard(
                 question: question,
                 onAnswerSubmit: (selectedOptions) {
-                  // Answer submission for random questions
-                  // Could be implemented later if needed
+                  _submitAnswer(question, selectedOptions);
                 },
               ),
             ],
@@ -273,4 +292,41 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
       ),
     );
   }
+
+  Future<void> _submitAnswer(CompositeQuestion question, List<String> selectedOptions) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    // TODO: Get real attempt ID for practice mode
+    const attemptId = "00000000-0000-0000-0000-000000000000"; 
+
+    try {
+      // Use reusable service to submit answer
+      final wsService = await AnswerSubmissionService.submitAnswer(
+        attemptId: attemptId,
+        questionId: question.id,
+        answer: selectedOptions,
+      );
+      
+      Navigator.pop(context); // Close loading
+
+      // Show explanation sheet
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => ExplanationSheet(wsService: wsService),
+      );
+
+    } catch (e) {
+      Navigator.pop(context); // Close loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to connect: $e')),
+      );
+    }
+  }
 }
+

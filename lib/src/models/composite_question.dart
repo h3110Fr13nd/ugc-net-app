@@ -28,17 +28,17 @@ class Media {
 
   factory Media.fromJson(Map<String, dynamic> json) {
     return Media(
-      id: json['id'].toString(),
-      url: json['url'] as String,
-      storageKey: json['storage_key'] as String,
-      mimeType: json['mime_type'] as String?,
+      id: json['id']?.toString() ?? '',
+      url: json['url']?.toString() ?? '',
+      storageKey: json['storage_key']?.toString() ?? '',
+      mimeType: json['mime_type']?.toString(),
       width: _parseInt(json['width']),
       height: _parseInt(json['height']),
       sizeBytes: _parseInt(json['size_bytes']),
-      checksum: json['checksum'] as String?,
+      checksum: json['checksum']?.toString(),
       metadata: (json['meta_data'] as Map<String, dynamic>?) ?? {},
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      createdAt: _parseDate(json['created_at']),
+      updatedAt: _parseDate(json['updated_at']),
     );
   }
 
@@ -102,11 +102,11 @@ class QuestionPart {
 
   factory QuestionPart.fromJson(Map<String, dynamic> json) {
     return QuestionPart(
-      id: json['id'].toString(),
-      questionId: json['question_id'].toString(),
+      id: json['id']?.toString() ?? '',
+      questionId: json['question_id']?.toString() ?? '',
       index: _parseInt(json['index']) ?? 0,
-      partType: PartType.fromString(json['part_type'] as String),
-      content: json['content'] as String?,
+      partType: PartType.fromString(json['part_type']?.toString() ?? 'text'),
+      content: json['content']?.toString(),
       contentJson: json['content_json'] as Map<String, dynamic>?,
       mediaId: json['media_id']?.toString(),
       media: json['media'] != null ? Media.fromJson(json['media'] as Map<String, dynamic>) : null,
@@ -149,11 +149,11 @@ class OptionPart {
 
   factory OptionPart.fromJson(Map<String, dynamic> json) {
     return OptionPart(
-      id: json['id'].toString(),
-      optionId: json['option_id'].toString(),
+      id: json['id']?.toString() ?? '',
+      optionId: json['option_id']?.toString() ?? '',
       index: _parseInt(json['index']) ?? 0,
-      partType: PartType.fromString(json['part_type'] as String),
-      content: json['content'] as String?,
+      partType: PartType.fromString(json['part_type']?.toString() ?? 'text'),
+      content: json['content']?.toString(),
       mediaId: json['media_id']?.toString(),
       media: json['media'] != null ? Media.fromJson(json['media'] as Map<String, dynamic>) : null,
     );
@@ -198,20 +198,17 @@ class QuestionOption {
         metadata = metadata ?? {};
 
   factory QuestionOption.fromJson(Map<String, dynamic> json) {
-    print('DEBUG QuestionOption.fromJson: $json');
-    print('DEBUG weight value: ${json['weight']}, type: ${json['weight'].runtimeType}');
-    
     return QuestionOption(
-      id: json['id'].toString(),
-      questionId: json['question_id'].toString(),
-      label: json['label'] as String?,
+      id: json['id']?.toString() ?? '',
+      questionId: json['question_id']?.toString() ?? '',
+      label: json['label']?.toString(),
       index: _parseInt(json['index']),
-      isCorrect: json['is_correct'] as bool? ?? false,
+      isCorrect: json['is_correct'] == true,
       weight: _parseDouble(json['weight']) ?? 1.0,
       parts: (json['parts'] as List<dynamic>?)?.map((e) => OptionPart.fromJson(e as Map<String, dynamic>)).toList() ?? [],
       metadata: (json['meta_data'] as Map<String, dynamic>?) ?? {},
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      createdAt: _parseDate(json['created_at']),
+      updatedAt: _parseDate(json['updated_at']),
     );
   }
 
@@ -286,11 +283,11 @@ class CompositeQuestion {
 
   factory CompositeQuestion.fromJson(Map<String, dynamic> json) {
     return CompositeQuestion(
-      id: json['id'].toString(),
+      id: json['id']?.toString() ?? '',
       canonicalId: json['canonical_id']?.toString(),
-      title: json['title'] as String?,
-      description: json['description'] as String?,
-      answerType: AnswerType.fromString(json['answer_type'] as String? ?? 'options'),
+      title: json['title']?.toString(),
+      description: json['description']?.toString(),
+      answerType: AnswerType.fromString(json['answer_type']?.toString() ?? 'options'),
       scoring: (json['scoring'] as Map<String, dynamic>?) ?? {},
       difficulty: _parseInt(json['difficulty']),
       estimatedTimeSeconds: _parseInt(json['estimated_time_seconds']),
@@ -298,8 +295,8 @@ class CompositeQuestion {
       options: (json['options'] as List<dynamic>?)?.map((e) => QuestionOption.fromJson(e as Map<String, dynamic>)).toList() ?? [],
       metadata: (json['meta_data'] as Map<String, dynamic>?) ?? {},
       createdBy: json['created_by']?.toString(),
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      createdAt: _parseDate(json['created_at']),
+      updatedAt: _parseDate(json['updated_at']),
     );
   }
 
@@ -320,6 +317,8 @@ class CompositeQuestion {
         'updated_at': updatedAt.toIso8601String(),
       };
 
+  
+
   /// Helper to get text representation of all parts combined
   String get combinedText {
     return parts.where((p) => p.partType == PartType.text && p.content != null).map((p) => p.content!).join('\n\n');
@@ -333,28 +332,26 @@ class CompositeQuestion {
 
 /// Helper function to parse double from either string or number
 double? _parseDouble(dynamic value) {
-  print('DEBUG _parseDouble: value=$value, type=${value.runtimeType}');
   if (value == null) return null;
   if (value is num) return value.toDouble();
-  if (value is String) {
-    final result = double.tryParse(value);
-    print('DEBUG _parseDouble: parsed string "$value" to $result');
-    return result;
-  }
-  print('DEBUG _parseDouble: unexpected type ${value.runtimeType}');
+  if (value is String) return double.tryParse(value);
   return null;
 }
 
 /// Helper function to parse int from either string or number
 int? _parseInt(dynamic value) {
-  print('DEBUG _parseInt: value=$value, type=${value.runtimeType}');
   if (value == null) return null;
   if (value is num) return value.toInt();
-  if (value is String) {
-    final result = int.tryParse(value);
-    print('DEBUG _parseInt: parsed string "$value" to $result');
-    return result;
-  }
-  print('DEBUG _parseInt: unexpected type ${value.runtimeType}');
+  if (value is String) return int.tryParse(value);
   return null;
+}
+
+/// Parse a DateTime from JSON value, safely handling nulls and returning epoch
+DateTime _parseDate(dynamic value) {
+  if (value == null) return DateTime.fromMillisecondsSinceEpoch(0);
+  try {
+    return DateTime.parse(value as String);
+  } catch (_) {
+    return DateTime.fromMillisecondsSinceEpoch(0);
+  }
 }

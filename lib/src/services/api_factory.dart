@@ -1,7 +1,8 @@
 import 'api_client.dart';
 import 'token_manager.dart';
 import 'package:dio/dio.dart';
-import 'package:net_api/net_api.dart';
+import 'package:net_api/net_api.dart' as api;
+
 
 /// Simple ApiFactory that creates and returns shared API clients.
 ///
@@ -12,7 +13,7 @@ import 'package:net_api/net_api.dart';
 ///   `TokenManager.tokenProvider` when available.
 class ApiFactory {
   static ApiClient? _client;
-  static NetApi? _netApi;
+  static api.NetApi? _netApi;
 
   static ApiClient getClient({String? baseUrl}) {
     if (_client != null) return _client!;
@@ -29,7 +30,7 @@ class ApiFactory {
   /// an interceptor that injects `Authorization: Bearer <token>` using the
   /// global `TokenManager.tokenProvider` when available. Optionally pass
   /// `baseUrl` to override the default (e.g. http://localhost:8000).
-  static NetApi getNetApi({String? baseUrl}) {
+  static api.NetApi getNetApi({String? baseUrl}) {
     if (_netApi != null) return _netApi!;
 
     // Interceptor to attach Authorization header from TokenManager
@@ -64,7 +65,7 @@ class ApiFactory {
       receiveTimeout: const Duration(seconds: 15),
     ));
 
-    _netApi = NetApi(
+    _netApi = api.NetApi(
       dio: dio,
       interceptors: [authInterceptor],
     );
@@ -72,7 +73,7 @@ class ApiFactory {
   }
 
   /// Replace the shared generated client (useful for tests)
-  static void setNetApi(NetApi api) {
+  static void setNetApi(api.NetApi api) {
     _netApi = api;
   }
 }

@@ -29,6 +29,8 @@ dependencies:
   one_of_serializer: ^1.5.0
   net_api:
     path: lib/generated_api
+  web_socket_channel: ^3.0.3
+  flutter_markdown: ^0.6.14
 
 dev_dependencies:
   flutter_test:

@@ -3,7 +3,9 @@ import '../models/taxonomy_node.dart';
 import '../models/composite_question.dart';
 
 import '../services/question_service.dart';
+import '../services/answer_submission_service.dart';
 import '../widgets/composite_question_card.dart';
+import '../widgets/explanation_sheet.dart';
 
 class TaxonomyNodePage extends StatefulWidget {
   final TaxonomyNode node;
@@ -102,6 +104,45 @@ class _TaxonomyNodePageState extends State<TaxonomyNodePage> {
     }
   }
 
+  Future<void> _submitAnswer(CompositeQuestion question, List<String> selectedOptions) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    // Use placeholder attempt ID for practice mode
+    const attemptId = "00000000-0000-0000-0000-000000000000"; 
+
+    try {
+      // Submit answer via WebSocket
+      final wsService = await AnswerSubmissionService.submitAnswer(
+        attemptId: attemptId,
+        questionId: question.id,
+        answer: selectedOptions,
+      );
+      
+      if (mounted) {
+        Navigator.pop(context); // Close loading
+
+        // Show explanation sheet
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          builder: (context) => ExplanationSheet(wsService: wsService),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to connect: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -187,10 +228,7 @@ class _TaxonomyNodePageState extends State<TaxonomyNodePage> {
                             child: CompositeQuestionCard(
                               question: q,
                               isInteractive: true,
-                              onAnswerSubmit: (selectedIds) {
-                                // Handle submission if needed, or just let the card handle local state
-                                // For now we just let the card handle it visually
-                              },
+                              onAnswerSubmit: (selectedIds) => _submitAnswer(q, selectedIds),
                             ),
                           );
                         },
