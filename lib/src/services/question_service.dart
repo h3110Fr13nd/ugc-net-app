@@ -1,4 +1,4 @@
-import 'package:net_api/net_api.dart' as api;
+import 'package:net_api/api.dart' as api;
 import 'api_factory.dart';
 import '../models/composite_question.dart';
 
@@ -9,7 +9,7 @@ import '../models/composite_question.dart';
 ///   to the given taxonomy id. This is a fallback until the API
 ///   exposes a server-side filter for taxonomy.
 class QuestionService {
-  final _api = ApiFactory.getNetApi().getQuestionsApi();
+  final _api = ApiFactory.getQuestionsApi();
 
 
   // In-memory per-taxonomy cache. Keyed by taxonomyId.
@@ -21,8 +21,14 @@ class QuestionService {
   // Prevent concurrent loads per taxonomy.
   final Map<String, bool> _taxonomyLoading = {};
 
-  Future<List<CompositeQuestion>> listQuestions({int page = 1, int pageSize = 20, String? status, bool randomize = false}) async {
-    final resp = await _api.listQuestionsApiV1QuestionsGet(page: page, pageSize: pageSize, status: status, randomize: randomize);
+  Future<List<CompositeQuestion>> listQuestions({int page = 1, int pageSize = 20, String? status, bool randomize = false, bool includeUserAttempt = false}) async {
+    final resp = await _api.listQuestionsApiV1QuestionsGet(
+      page: page, 
+      pageSize: pageSize, 
+      status: status, 
+      randomize: randomize, 
+      includeUserAttempt: includeUserAttempt
+    );
     if (resp == null) return [];
     return resp.questions.map((q) => _mapApiToApp(q)).toList();
   }
@@ -152,7 +158,7 @@ class QuestionService {
         label: o.label,
         index: o.index,
         isCorrect: o.isCorrect == true,
-        weight: double.tryParse(o.weight) ?? 1.0,
+        weight: o.weight.toDouble(),
         parts: oParts,
         metadata: _deepCopyMetadata(o.metaData),
         createdAt: o.createdAt,
@@ -174,6 +180,7 @@ class QuestionService {
       metadata: _deepCopyMetadata(src.metaData),
       createdAt: src.createdAt,
       updatedAt: src.updatedAt,
+      userAttempt: src.userAttempt?.toJson(),
     );
     return result;
     } catch (e, stackTrace) {
@@ -192,6 +199,7 @@ class QuestionService {
       page: page,
       pageSize: pageSize,
       taxonomyId: taxonomyId,
+      includeUserAttempt: true,
     );
     if (resp == null) return [];
     final items = resp.questions.toList();
@@ -263,6 +271,7 @@ class QuestionService {
         page: currentPage,
         pageSize: pageSize,
         taxonomyId: taxonomyId,
+        includeUserAttempt: true,
       );
 
       if (resp == null) break;
@@ -290,10 +299,42 @@ class QuestionService {
       difficulty: difficulty,
       answerType: answerType,
       taxonomyId: taxonomyId,
+      includeUserAttempt: true,
     );
     if (resp == null) return [];
     final items = resp.questions.toList();
     return items.map((q) => _mapApiToApp(q)).toList();
   }
-}
 
+  /// Submit an attempt for a single question
+  Future<api.QuestionAttemptResponse?> submitQuestionAttempt({
+    required String questionId,
+    required List<String> selectedOptions,
+    String? textResponse,
+    double? numericResponse,
+  }) async {
+    final parts = <api.QuestionAttemptPartCreate>[];
+    
+    // For now, assuming single part questions or mapping all options to the first part
+    // This logic might need refinement for multi-part questions
+    if (selectedOptions.isNotEmpty) {
+      parts.add(api.QuestionAttemptPartCreate(
+        selectedOptionIds: selectedOptions,
+      ));
+    }
+    
+    if (textResponse != null) {
+      parts.add(api.QuestionAttemptPartCreate(
+        textResponse: textResponse,
+      ));
+    }
+
+    final payload = api.QuestionAttemptCreate(
+      questionId: questionId,
+      parts: parts,
+      attemptIndex: 1, // TODO: Track attempt index
+    );
+
+    return await _api.submitQuestionAttemptApiV1QuestionsQuestionIdAttemptPost(questionId, payload);
+  }
+}

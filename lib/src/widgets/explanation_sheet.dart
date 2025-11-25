@@ -40,8 +40,13 @@ class _ExplanationSheetState extends State<ExplanationSheet> {
           } else if (type == 'explanation_block') {
             // New explanation block arrived
             final block = msg['block'];
+            final index = msg['index'] as int?;
             if (block is Map<String, dynamic>) {
-              _explanationBlocks.add(block);
+              if (index != null && index < _explanationBlocks.length) {
+                _explanationBlocks[index] = block;
+              } else {
+                _explanationBlocks.add(block);
+              }
             }
           } else if (type == 'explanation_end') {
             _isComplete = true;

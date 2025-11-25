@@ -1,19 +1,35 @@
 import 'api_client.dart';
 import 'token_manager.dart';
-import 'package:dio/dio.dart';
-import 'package:net_api/net_api.dart' as api;
+import 'package:http/http.dart' as http;
+import 'package:net_api/api.dart' as api;
 
+class AuthenticatedHttpClient extends http.BaseClient {
+  final http.Client _inner = http.Client();
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    try {
+      final provider = TokenManager.tokenProvider;
+      print('[AuthenticatedHttpClient] TokenProvider exists: ${provider != null}');
+      if (provider != null) {
+        final token = await provider();
+        print('[AuthenticatedHttpClient] Token retrieved: ${token != null ? "YES (${token.substring(0, 20)}...)" : "NO"}');
+        if (token != null && token.isNotEmpty) {
+          request.headers['Authorization'] = 'Bearer $token';
+          print('[AuthenticatedHttpClient] Authorization header set');
+        }
+      }
+    } catch (e) {
+      print('[AuthenticatedHttpClient] Error getting token: $e');
+    }
+    return _inner.send(request);
+  }
+}
 
 /// Simple ApiFactory that creates and returns shared API clients.
-///
-/// - `getClient()` returns the existing lightweight `ApiClient` (http package)
-///   for code that still uses it.
-/// - `getNetApi()` returns the generated `NetApi` (dart-dio + generated APIs)
-///   wired with a request interceptor that injects the access token from
-///   `TokenManager.tokenProvider` when available.
 class ApiFactory {
   static ApiClient? _client;
-  static api.NetApi? _netApi;
+  static api.ApiClient? _apiClient;
 
   static ApiClient getClient({String? baseUrl}) {
     if (_client != null) return _client!;
@@ -26,54 +42,42 @@ class ApiFactory {
     _client = client;
   }
 
-  /// Return a generated `NetApi` instance (dart-dio). This is wired with
-  /// an interceptor that injects `Authorization: Bearer <token>` using the
-  /// global `TokenManager.tokenProvider` when available. Optionally pass
-  /// `baseUrl` to override the default (e.g. http://localhost:8000).
-  static api.NetApi getNetApi({String? baseUrl}) {
-    if (_netApi != null) return _netApi!;
+  static api.ApiClient getApiClient({String? baseUrl}) {
+    if (_apiClient != null) return _apiClient!;
 
-    // Interceptor to attach Authorization header from TokenManager
-    final authInterceptor = InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        try {
-          final provider = TokenManager.tokenProvider;
-          if (provider != null) {
-            final token = await provider();
-            if (token != null && token.isNotEmpty) {
-              options.headers['Authorization'] = 'Bearer $token';
-            }
-          }
-        } catch (_) {}
-        handler.next(options);
-      },
-    );
-
-    // Resolve base URL using the same logic as ApiClient so that both the
-    // lightweight http client and the generated Dio client point to the
-    // same backend. This lets --dart-define=API_BASE_URL and the
-    // repository `.env` (via the run script) control both clients.
+    // Resolve base URL
     final client = getClient();
     var resolvedBase = baseUrl ?? client.baseUrl;
     if (resolvedBase.endsWith('/api/v1')) {
       resolvedBase = resolvedBase.substring(0, resolvedBase.length - '/api/v1'.length);
     }
-
-    final dio = Dio(BaseOptions(
-      baseUrl: resolvedBase,
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
-    ));
-
-    _netApi = api.NetApi(
-      dio: dio,
-      interceptors: [authInterceptor],
-    );
-    return _netApi!;
+    // Generated client expects base path without /api/v1? 
+    // Wait, generated client usually appends path. 
+    // If generated client basePath defaults to http://localhost, it might NOT include /api/v1.
+    // But my endpoints in openapi.json start with /api/v1.
+    // So basePath should be just the host.
+    
+    // However, the previous code stripped /api/v1.
+    // Let's assume basePath should be just host:port.
+    
+    _apiClient = api.ApiClient(basePath: resolvedBase);
+    _apiClient!.client = AuthenticatedHttpClient();
+    return _apiClient!;
   }
 
-  /// Replace the shared generated client (useful for tests)
-  static void setNetApi(api.NetApi api) {
-    _netApi = api;
+  static api.QuestionsApi getQuestionsApi() {
+    return api.QuestionsApi(getApiClient());
+  }
+
+  static api.StatsApi getStatsApi() {
+    return api.StatsApi(getApiClient());
+  }
+  
+  static api.AttemptsApi getAttemptsApi() {
+    return api.AttemptsApi(getApiClient());
+  }
+  
+  static api.TaxonomyApi getTaxonomyApi() {
+    return api.TaxonomyApi(getApiClient());
   }
 }

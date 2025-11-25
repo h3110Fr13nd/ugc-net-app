@@ -122,10 +122,8 @@ class AppShell extends StatelessWidget {
             case 0:
               Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
             case 1:
-              Navigator.pushNamed(context, '/practice');
-            case 2:
               Navigator.pushNamed(context, '/stats');
-            case 3:
+            case 2:
               Navigator.pushNamed(context, '/import');
             case _:
           }
@@ -134,10 +132,6 @@ class AppShell extends StatelessWidget {
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.school),
-            label: 'Practice',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.bar_chart),

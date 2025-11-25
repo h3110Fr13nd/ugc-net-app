@@ -4,7 +4,7 @@ import 'api_factory.dart';
 /// Service to fetch taxonomy data from the backend and map it to
 /// lightweight client models used by the UI.
 class TaxonomyService {
-  final _api = ApiFactory.getNetApi().getTaxonomyApi();
+  final _api = ApiFactory.getTaxonomyApi();
 
   /// Returns the taxonomy tree (top-level nodes with nested children).
   Future<List<TaxonomyNode>> getTaxonomyTree() async {

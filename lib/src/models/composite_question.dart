@@ -260,6 +260,7 @@ class CompositeQuestion {
   final String? createdBy;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final Map<String, dynamic>? userAttempt;
 
   CompositeQuestion({
     required this.id,
@@ -276,6 +277,7 @@ class CompositeQuestion {
     this.createdBy,
     required this.createdAt,
     required this.updatedAt,
+    this.userAttempt,
   })  : parts = parts ?? [],
         options = options ?? [],
         scoring = scoring ?? {},
@@ -297,6 +299,7 @@ class CompositeQuestion {
       createdBy: json['created_by']?.toString(),
       createdAt: _parseDate(json['created_at']),
       updatedAt: _parseDate(json['updated_at']),
+      userAttempt: json['user_attempt'] as Map<String, dynamic>?,
     );
   }
 
@@ -315,6 +318,7 @@ class CompositeQuestion {
         'created_by': createdBy,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
+        'user_attempt': userAttempt,
       };
 
   

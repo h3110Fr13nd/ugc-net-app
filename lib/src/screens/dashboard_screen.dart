@@ -61,12 +61,6 @@ class DashboardScreen extends StatelessWidget {
                   onTap: () => Navigator.pushNamed(context, '/pages/composite_questions'),
                 ),
                 _QuickActionCard(
-                  icon: Icons.quiz,
-                  label: 'Start Practice',
-                  color: Colors.green,
-                  onTap: () => Navigator.pushNamed(context, '/practice'),
-                ),
-                _QuickActionCard(
                   icon: Icons.list,
                   label: 'View Quizzes',
                   color: Colors.orange,

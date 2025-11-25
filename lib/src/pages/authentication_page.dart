@@ -49,7 +49,8 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
 
     try {
       final appState = context.read<MyAppState>();
-      final auth = AuthService();
+      const webClientId = '305527226287-a1p11gqcbdjdgcred1nt4m3mvljnf3h4.apps.googleusercontent.com';
+      final auth = AuthService(null, null, webClientId);
       final res = await auth.login(_emailController.text, _passwordController.text);
 
       if (res.containsKey('access_token')) {
@@ -74,13 +75,16 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
     final scaffold = ScaffoldMessenger.of(context);
     final appState = context.read<MyAppState>();
     scaffold.showSnackBar(const SnackBar(content: Text('Starting Google sign in...')));
-    final auth = AuthService();
+    const webClientId = '305527226287-a1p11gqcbdjdgcred1nt4m3mvljnf3h4.apps.googleusercontent.com';
+    final auth = AuthService(null, null, webClientId);
     
     try {
       final res = await auth.signInWithGoogle();
-      
+      print('[AuthPage] Google sign-in response keys: ${res.keys}');
+      print('[AuthPage] access_token present: ${res.containsKey('access_token')}');
       if (res.containsKey('access_token')) {
         final token = res['access_token'] as String;
+        print('[AuthPage] Token to store: ${token.substring(0, 30)}...');
         final user = res['user'] as Map<String, dynamic>?;
         await appState.setAuth(token, user ?? {});
         scaffold.showSnackBar(const SnackBar(content: Text('Signed in successfully')));

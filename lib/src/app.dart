@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'models/app_state.dart';
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
-import 'screens/practice_screen.dart';
 import 'screens/stats_screen.dart';
 import 'screens/import_screen.dart';
 
@@ -24,7 +23,6 @@ import 'pages/options_editor_page.dart';
 import 'pages/media_manager_page.dart';
 import 'pages/topics_page.dart';
 import 'pages/question_banks_page.dart';
-import 'pages/quiz_attempt_page.dart';
 import 'pages/attempt_review_page.dart';
 import 'pages/user_profile_page.dart';
 import 'pages/admin_users_page.dart';
@@ -60,7 +58,6 @@ class MyApp extends StatelessWidget {
           routes: {
             '/home': (context) => const HomeScreen(),
             '/settings': (context) => const SettingsScreen(),
-            '/practice': (context) => const PracticeScreen(),
             '/stats': (context) => const StatsScreen(),
             '/import': (context) => const ImportScreen(),
             // Pages from docs/pages
@@ -77,7 +74,6 @@ class MyApp extends StatelessWidget {
             '/pages/topics': (context) => const TopicsPage(),
             '/pages/random-questions': (context) => const RandomQuestionsPage(),
             '/pages/question_banks': (context) => const QuestionBanksPage(),
-            '/pages/quiz_attempt': (context) => const QuizAttemptPage(),
             '/pages/attempt_review': (context) => const AttemptReviewPage(),
             '/pages/user_profile': (context) => const UserProfilePage(),
             '/pages/admin_users': (context) => const AdminUsersPage(),

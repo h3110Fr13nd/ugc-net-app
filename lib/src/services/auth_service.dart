@@ -174,9 +174,14 @@ class AuthService {
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'id_token': idToken}),
       );
+      print('[AuthService] Backend response status: ${res.statusCode}');
+      print('[AuthService] Backend response body: ${res.body}');
       if (res.statusCode == 200) {
         await _storeRefreshTokenFromResponse(res);
-        return json.decode(res.body) as Map<String, dynamic>;
+        final responseData = json.decode(res.body) as Map<String, dynamic>;
+        print('[AuthService] Parsed response keys: ${responseData.keys}');
+        print('[AuthService] access_token in response: ${responseData.containsKey('access_token')}');
+        return responseData;
       }
 
       return {

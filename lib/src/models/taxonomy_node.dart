@@ -1,5 +1,5 @@
 // Lightweight client-side model that mirrors the server `TaxonomyTreeResponse`.
-import 'package:net_api/net_api.dart' as api;
+import 'package:net_api/api.dart' as api;
 
 class TaxonomyNode {
   final String id;

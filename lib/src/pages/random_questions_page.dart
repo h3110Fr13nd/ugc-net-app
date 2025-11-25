@@ -61,6 +61,7 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
         pageSize: _pageSize,
         status: _unattemptedOnly ? 'unattempted' : null,
         randomize: true,
+        includeUserAttempt: true,
       );
 
       if (mounted) {
@@ -94,6 +95,7 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
         pageSize: _pageSize,
         status: _unattemptedOnly ? 'unattempted' : null,
         randomize: true,
+        includeUserAttempt: true,
       );
 
       if (mounted) {
@@ -194,10 +196,57 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
               // Question card
               CompositeQuestionCard(
                 question: question,
+                // If user has attempted, we might want to show it as disabled or pre-filled
+                // But CompositeQuestionCard might not support that yet.
+                // For now, we rely on the card's internal state if it was just answered,
+                // but for reloaded questions, we need to pass the attempt.
+                // TODO: Update CompositeQuestionCard to accept initial attempt state.
+                // For now, we just handle new submissions.
                 onAnswerSubmit: (selectedOptions) {
                   _submitAnswer(question, selectedOptions);
                 },
               ),
+              
+              // Show previous attempt info if available
+              if (question.userAttempt != null)
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check_circle_outline, color: Colors.green),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'You attempted this on ${DateTime.parse(question.userAttempt!['started_at']).toLocal().toString().split('.')[0]}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                             // Show explanation
+                             // We need to construct a dummy wsService or similar to show ExplanationSheet
+                             // Or better, fetch the full attempt result.
+                             // For now, just show a simple dialog or re-open explanation if possible.
+                             // Since we don't have the full grading details in the list response (only basic attempt info),
+                             // we might need to fetch it.
+                             // But let's try to show what we have.
+                             ScaffoldMessenger.of(context).showSnackBar(
+                               const SnackBar(content: Text('Review feature coming soon!')),
+                             );
+                          },
+                          child: const Text('Review'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
             ],
           ),
         );
@@ -294,38 +343,72 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
   }
 
   Future<void> _submitAnswer(CompositeQuestion question, List<String> selectedOptions) async {
-    // Show loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
-    // TODO: Get real attempt ID for practice mode
-    const attemptId = "00000000-0000-0000-0000-000000000000"; 
-
     try {
-      // Use reusable service to submit answer
+      final appState = context.read<MyAppState>();
+      final userId = appState.user?['id'];
+      
+      if (userId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User not authenticated. Please log in.')),
+        );
+        return;
+      }
+
+      // Show loading indicator
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Dialog(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Creating attempt...'),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // Create a standalone attempt (no quiz_id)
+      final attemptId = await AnswerSubmissionService.createAttempt(
+        quizId: null,  // Standalone attempt for random questions
+        userId: userId,
+      );
+      
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      debugPrint('✓ Created standalone attempt: $attemptId for question: ${question.id}');
+
+      // Now submit the answer via WebSocket
       final wsService = await AnswerSubmissionService.submitAnswer(
         attemptId: attemptId,
         questionId: question.id,
-        answer: selectedOptions,
+        userId: userId,
+        answer: selectedOptions.isNotEmpty ? selectedOptions.first : '',
       );
-      
-      Navigator.pop(context); // Close loading
 
       // Show explanation sheet
+      if (!mounted) return;
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
-        builder: (context) => ExplanationSheet(wsService: wsService),
+        builder: (context) => ExplanationSheet(
+          wsService: wsService,
+        ),
       );
-
     } catch (e) {
-      Navigator.pop(context); // Close loading
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to connect: $e')),
-      );
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog if still open
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
     }
   }
 }

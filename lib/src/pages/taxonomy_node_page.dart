@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/taxonomy_node.dart';
 import '../models/composite_question.dart';
+import '../models/app_state.dart';
+import 'package:provider/provider.dart';
+
 
 import '../services/question_service.dart';
 import '../services/answer_submission_service.dart';
@@ -112,14 +115,32 @@ class _TaxonomyNodePageState extends State<TaxonomyNodePage> {
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    // Use placeholder attempt ID for practice mode
-    const attemptId = "00000000-0000-0000-0000-000000000000"; 
+    // Get user from app state
+    final appState = context.read<MyAppState>();
+    final userId = appState.user?['id'] as String?;
+
+    if (userId == null) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User not authenticated')),
+        );
+      }
+      return;
+    }
 
     try {
+      // Create standalone attempt for this topic/taxonomy
+      final attemptId = await AnswerSubmissionService.createAttempt(
+        quizId: null,  // Standalone attempt for taxonomy-based questions
+        userId: userId,
+      );
+
       // Submit answer via WebSocket
       final wsService = await AnswerSubmissionService.submitAnswer(
         attemptId: attemptId,
         questionId: question.id,
+        userId: userId,
         answer: selectedOptions,
       );
       
@@ -137,7 +158,7 @@ class _TaxonomyNodePageState extends State<TaxonomyNodePage> {
       if (mounted) {
         Navigator.pop(context); // Close loading
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to connect: $e')),
+          SnackBar(content: Text('Failed to submit answer: $e')),
         );
       }
     }

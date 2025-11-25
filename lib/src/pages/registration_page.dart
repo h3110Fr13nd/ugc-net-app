@@ -68,7 +68,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
     setState(() => _isLoading = true);
 
     try {
-      final auth = AuthService();
+      const webClientId = '305527226287-a1p11gqcbdjdgcred1nt4m3mvljnf3h4.apps.googleusercontent.com';
+      final auth = AuthService(null, null, webClientId);
       final res = await auth.register(
         email: _emailController.text,
         password: _passwordController.text,
