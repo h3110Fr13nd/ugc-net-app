@@ -23,27 +23,53 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
   final int _pageSize = 20;
   bool _hasMore = true;
   bool _unattemptedOnly = false;
-  final ScrollController _scrollController = ScrollController();
+  final PageController _pageController = PageController();
+  
+  // Time tracking
+  DateTime? _pageStartTime;
+  int _currentQuestionIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _loadRandomQuestions();
-    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
-  void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.8) {
+  void _onPageChanged(int index) {
+    // Record view for the previous question
+    if (_pageStartTime != null && _currentQuestionIndex < _questions.length) {
+       final duration = DateTime.now().difference(_pageStartTime!).inSeconds;
+       final prevQuestion = _questions[_currentQuestionIndex];
+       _recordView(prevQuestion, duration);
+    }
+    
+    setState(() {
+      _currentQuestionIndex = index;
+      _pageStartTime = DateTime.now();
+    });
+
+    // Load more if near end
+    if (index >= _questions.length - 3) {
       if (!_isLoadingMore && _hasMore) {
         _loadMoreQuestions();
       }
     }
+  }
+
+  Future<void> _recordView(CompositeQuestion question, int duration) async {
+     // Don't record if duration is too short (e.g. < 1s) to avoid noise from fast scrolling
+     if (duration < 1) return;
+     try {
+       await QuestionService().recordView(question.id, duration);
+     } catch (e) {
+       debugPrint('Error recording view: $e');
+     }
   }
 
   Future<void> _loadRandomQuestions() async {
@@ -52,6 +78,7 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
       _error = null;
       _currentPage = 1;
       _hasMore = true;
+      _questions = [];
     });
 
     try {
@@ -69,6 +96,10 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
           _questions = questions;
           _isLoading = false;
           _hasMore = questions.length >= _pageSize;
+          if (_questions.isNotEmpty) {
+            _pageStartTime = DateTime.now();
+            _currentQuestionIndex = 0;
+          }
         });
       }
     } catch (e) {
@@ -171,83 +202,83 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
       );
     }
 
-    return ListView.builder(
-      controller: _scrollController,
+    return PageView.builder(
+      controller: _pageController,
+      scrollDirection: Axis.horizontal,
+      onPageChanged: _onPageChanged,
       itemCount: _questions.length + (_isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
         if (index >= _questions.length) {
-          // Loading indicator at the bottom
-          return const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Center(child: CircularProgressIndicator()),
-          );
+          return const Center(child: CircularProgressIndicator());
         }
         
         final question = _questions[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Taxonomy breadcrumbs
-              if (question.metadata['taxonomy_paths'] != null)
-                _buildTaxonomyBreadcrumbs(question),
-              
-              // Question card
-              CompositeQuestionCard(
-                question: question,
-                // If user has attempted, we might want to show it as disabled or pre-filled
-                // But CompositeQuestionCard might not support that yet.
-                // For now, we rely on the card's internal state if it was just answered,
-                // but for reloaded questions, we need to pass the attempt.
-                // TODO: Update CompositeQuestionCard to accept initial attempt state.
-                // For now, we just handle new submissions.
-                onAnswerSubmit: (selectedOptions) {
-                  _submitAnswer(question, selectedOptions);
-                },
-              ),
-              
-              // Show previous attempt info if available
-              if (question.userAttempt != null)
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.green.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.check_circle_outline, color: Colors.green),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'You attempted this on ${DateTime.parse(question.userAttempt!['started_at']).toLocal().toString().split('.')[0]}',
-                            style: Theme.of(context).textTheme.bodySmall,
+        return SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Taxonomy breadcrumbs
+                if (question.metadata['taxonomy_paths'] != null)
+                  _buildTaxonomyBreadcrumbs(question),
+                
+                const SizedBox(height: 16),
+
+                // Question card
+                CompositeQuestionCard(
+                  question: question,
+                  onAnswerSubmit: (selectedOptions) {
+                    _submitAnswer(question, selectedOptions);
+                  },
+                ),
+                
+                // Show previous attempt info if available
+                if (question.userAttempt != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16.0),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle_outline, color: Colors.green),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Attempted on ${DateTime.parse(question.userAttempt!['started_at']).toLocal().toString().split('.')[0]}',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                                if (question.userAttempt!['score'] != null)
+                                  Text(
+                                    'Score: ${(question.userAttempt!['score'] * 100).toStringAsFixed(0)}%',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                             // Show explanation
-                             // We need to construct a dummy wsService or similar to show ExplanationSheet
-                             // Or better, fetch the full attempt result.
-                             // For now, just show a simple dialog or re-open explanation if possible.
-                             // Since we don't have the full grading details in the list response (only basic attempt info),
-                             // we might need to fetch it.
-                             // But let's try to show what we have.
-                             ScaffoldMessenger.of(context).showSnackBar(
-                               const SnackBar(content: Text('Review feature coming soon!')),
-                             );
-                          },
-                          child: const Text('Review'),
-                        ),
-                      ],
+                          TextButton(
+                            onPressed: () {
+                               // TODO: Implement full review by fetching grading details
+                               ScaffoldMessenger.of(context).showSnackBar(
+                                 const SnackBar(content: Text('Detailed review coming soon!')),
+                               );
+                            },
+                            child: const Text('Review'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -260,27 +291,21 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
       return const SizedBox.shrink();
     }
     
-    // Convert to List<String> - handle ListJsonObject by converting via JSON
     final List<String> taxonomyPaths = [];
     try {
-      // Convert to JSON and back to get a proper List
       final jsonStr = taxonomyPathsRaw.toString();
-      // If it's already a string representation like "[item1, item2]", parse it
-      // Otherwise, just treat each element
       if (taxonomyPathsRaw is List) {
         for (var item in taxonomyPathsRaw) {
           taxonomyPaths.add(item.toString());
         }
       } else {
-        // For ListJsonObject, convert to string and extract items
-        // The toString() should give us something like "[item1, item2]"
-        final str = jsonStr.substring(1, jsonStr.length - 1); // Remove [ and ]
+        final str = jsonStr.substring(1, jsonStr.length - 1);
         if (str.isNotEmpty) {
-          taxonomyPaths.add(str); // For now, just add the whole string as one path
+          taxonomyPaths.add(str);
         }
       }
     } catch (e) {
-      print('DEBUG Failed to convert taxonomy paths: $e');
+      debugPrint('DEBUG Failed to convert taxonomy paths: $e');
       return const SizedBox.shrink();
     }
     
@@ -289,13 +314,11 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
     }
 
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(12),
-          topRight: Radius.circular(12),
-        ),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -354,7 +377,12 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
         return;
       }
 
-      // Show loading indicator
+      // Calculate duration
+      int duration = 0;
+      if (_pageStartTime != null) {
+        duration = DateTime.now().difference(_pageStartTime!).inSeconds;
+      }
+
       if (!mounted) return;
       showDialog(
         context: context,
@@ -374,26 +402,24 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
         ),
       );
 
-      // Create a standalone attempt (no quiz_id)
       final attemptId = await AnswerSubmissionService.createAttempt(
-        quizId: null,  // Standalone attempt for random questions
+        quizId: null,
         userId: userId,
       );
       
       if (!mounted) return;
-      Navigator.pop(context); // Close loading dialog
+      Navigator.pop(context);
 
       debugPrint('✓ Created standalone attempt: $attemptId for question: ${question.id}');
 
-      // Now submit the answer via WebSocket
       final wsService = await AnswerSubmissionService.submitAnswer(
         attemptId: attemptId,
         questionId: question.id,
         userId: userId,
         answer: selectedOptions.isNotEmpty ? selectedOptions.first : '',
+        durationSeconds: duration, // Pass duration
       );
 
-      // Show explanation sheet
       if (!mounted) return;
       showModalBottomSheet(
         context: context,
@@ -402,9 +428,18 @@ class _RandomQuestionsPageState extends State<RandomQuestionsPage> {
           wsService: wsService,
         ),
       );
+      
+      // Update local state to show attempt immediately?
+      // Ideally we should reload the question or update the object.
+      // For now, we rely on the user swiping back/forth or reloading.
+      
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context); // Close loading dialog if still open
+        // Check if dialog is open
+        if (Navigator.canPop(context)) {
+             // This is risky if dialog wasn't open, but we are inside try block after showDialog
+             // Better to just show snackbar
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e')),
         );

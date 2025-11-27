@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/app_state.dart';
+import '../pages/dashboard_page.dart';
+import '../pages/quizzes_list_page.dart';
+import '../pages/topics_page.dart';
+import '../pages/random_questions_page.dart';
+import '../pages/settings_page.dart';
+import '../pages/authentication_page.dart';
 
 class AppShell extends StatelessWidget {
   final Widget child;
@@ -87,6 +93,14 @@ class AppShell extends StatelessWidget {
               ),
               const Divider(),
               ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('History'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/pages/history');
+              },
+            ),
+            ListTile(
                 leading: const Icon(Icons.settings),
                 title: const Text('Settings'),
                 onTap: () {
@@ -122,9 +136,7 @@ class AppShell extends StatelessWidget {
             case 0:
               Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
             case 1:
-              Navigator.pushNamed(context, '/stats');
-            case 2:
-              Navigator.pushNamed(context, '/import');
+              Navigator.pushNamed(context, '/pages/topics');
             case _:
           }
         },
@@ -134,12 +146,8 @@ class AppShell extends StatelessWidget {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart),
-            label: 'Stats',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.upload_file),
-            label: 'Import',
+            icon: Icon(Icons.category),
+            label: 'Topics',
           ),
         ],
       ),

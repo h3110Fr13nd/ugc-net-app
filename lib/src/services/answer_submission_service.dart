@@ -43,6 +43,7 @@ class AnswerSubmissionService {
     required String userId,
     required dynamic answer,
     int attemptIndex = 1,
+    int durationSeconds = 0,
   }) async {
     final wsService = WebSocketService();
     
@@ -64,6 +65,7 @@ class AnswerSubmissionService {
       ],
       "attempt_index": attemptIndex,
       "user_id": userId,  // ← NEW: Include user_id for stats
+      "duration_seconds": durationSeconds,
     };
     
     wsService.sendAnswer(payload);

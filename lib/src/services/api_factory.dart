@@ -10,13 +10,13 @@ class AuthenticatedHttpClient extends http.BaseClient {
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     try {
       final provider = TokenManager.tokenProvider;
-      print('[AuthenticatedHttpClient] TokenProvider exists: ${provider != null}');
+      // print('[AuthenticatedHttpClient] TokenProvider exists: ${provider != null}');
       if (provider != null) {
         final token = await provider();
-        print('[AuthenticatedHttpClient] Token retrieved: ${token != null ? "YES (${token.substring(0, 20)}...)" : "NO"}');
+        // print('[AuthenticatedHttpClient] Token retrieved: ${token != null ? "YES (${token.substring(0, 20)}...)" : "NO"}');
         if (token != null && token.isNotEmpty) {
           request.headers['Authorization'] = 'Bearer $token';
-          print('[AuthenticatedHttpClient] Authorization header set');
+          // print('[AuthenticatedHttpClient] Authorization header set');
         }
       }
     } catch (e) {

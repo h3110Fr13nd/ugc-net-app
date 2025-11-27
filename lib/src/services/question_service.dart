@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:net_api/api.dart' as api;
 import 'api_factory.dart';
 import '../models/composite_question.dart';
@@ -21,13 +22,14 @@ class QuestionService {
   // Prevent concurrent loads per taxonomy.
   final Map<String, bool> _taxonomyLoading = {};
 
-  Future<List<CompositeQuestion>> listQuestions({int page = 1, int pageSize = 20, String? status, bool randomize = false, bool includeUserAttempt = false}) async {
+  Future<List<CompositeQuestion>> listQuestions({int page = 1, int pageSize = 20, String? status, bool randomize = false, bool includeUserAttempt = false, String? taxonomyId}) async {
     final resp = await _api.listQuestionsApiV1QuestionsGet(
       page: page, 
       pageSize: pageSize, 
       status: status, 
       randomize: randomize, 
-      includeUserAttempt: includeUserAttempt
+      includeUserAttempt: includeUserAttempt,
+      taxonomyId: taxonomyId,
     );
     if (resp == null) return [];
     return resp.questions.map((q) => _mapApiToApp(q)).toList();
@@ -181,6 +183,7 @@ class QuestionService {
       createdAt: src.createdAt,
       updatedAt: src.updatedAt,
       userAttempt: src.userAttempt?.toJson(),
+      explanation: src.explanation?.toString(), // Map explanation if available
     );
     return result;
     } catch (e, stackTrace) {
@@ -312,6 +315,8 @@ class QuestionService {
     required List<String> selectedOptions,
     String? textResponse,
     double? numericResponse,
+    int attemptIndex = 1,
+    int durationSeconds = 0,
   }) async {
     final parts = <api.QuestionAttemptPartCreate>[];
     
@@ -332,9 +337,50 @@ class QuestionService {
     final payload = api.QuestionAttemptCreate(
       questionId: questionId,
       parts: parts,
-      attemptIndex: 1, // TODO: Track attempt index
+      attemptIndex: attemptIndex, // TODO: Track attempt index
+      durationSeconds: durationSeconds,
     );
 
     return await _api.submitQuestionAttemptApiV1QuestionsQuestionIdAttemptPost(questionId, payload);
+  }
+
+  /// Record a view of a question (without attempting)
+  Future<void> recordView(String questionId, int durationSeconds) async {
+    final client = AuthenticatedHttpClient();
+    final baseUrl = ApiFactory.getApiClient().basePath;
+    final url = Uri.parse('$baseUrl/api/v1/questions/$questionId/view?duration_seconds=$durationSeconds');
+    
+    try {
+      final response = await client.post(url);
+      if (response.statusCode >= 400) {
+        print('Failed to record view: ${response.statusCode} ${response.body}');
+      }
+    } catch (e) {
+      print('Error recording view: $e');
+    } finally {
+      client.close();
+    }
+  }
+
+  /// Get attempts for a specific question
+  Future<List<dynamic>> getQuestionAttempts(String questionId) async {
+    final client = AuthenticatedHttpClient();
+    final baseUrl = ApiFactory.getApiClient().basePath;
+    final url = Uri.parse('$baseUrl/api/v1/questions/$questionId/attempts');
+    
+    try {
+      final response = await client.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as List<dynamic>;
+      } else {
+        print('Failed to load question attempts: ${response.statusCode} ${response.body}');
+        return [];
+      }
+    } catch (e) {
+      print('Error loading question attempts: $e');
+      return [];
+    } finally {
+      client.close();
+    }
   }
 }

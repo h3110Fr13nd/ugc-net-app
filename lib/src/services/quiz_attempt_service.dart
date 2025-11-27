@@ -117,4 +117,54 @@ class QuizAttemptService {
       rethrow;
     }
   }
+
+  /// Get attempt history
+  Future<List<dynamic>> getAttemptHistory({int skip = 0, int limit = 50}) async {
+    final url = Uri.parse('${AppConfig.apiBaseUrl}/quiz-attempts/history?skip=$skip&limit=$limit');
+    try {
+      String? token;
+      if (TokenManager.tokenProvider != null) {
+        token = await TokenManager.tokenProvider!();
+      }
+      final headers = {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+
+      final response = await http.get(url, headers: headers);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as List<dynamic>;
+      } else {
+        throw Exception('Failed to load history: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error loading history: $e');
+      rethrow;
+    }
+  }
+
+  /// Get attempt results
+  Future<Map<String, dynamic>> getAttemptResults(String attemptId) async {
+    final url = Uri.parse('${AppConfig.apiBaseUrl}/quiz-attempts/$attemptId/results');
+    try {
+      String? token;
+      if (TokenManager.tokenProvider != null) {
+        token = await TokenManager.tokenProvider!();
+      }
+      final headers = {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+
+      final response = await http.get(url, headers: headers);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception('Failed to load results: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error loading results: $e');
+      rethrow;
+    }
+  }
 }

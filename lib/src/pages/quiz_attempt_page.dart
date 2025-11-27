@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'page_template.dart';
-import '../ui/ui.dart';
+import '../widgets/widgets.dart';
 import '../models/app_state.dart';
 import '../services/answer_submission_service.dart';
 import '../services/websocket_service.dart';

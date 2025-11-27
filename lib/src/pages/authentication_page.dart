@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
-import '../ui/ui.dart';
+import '../widgets/widgets.dart';
 import '../services/auth_service.dart';
 import '../models/app_state.dart';
 import 'registration_page.dart';

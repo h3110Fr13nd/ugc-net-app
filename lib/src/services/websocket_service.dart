@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'auth_service.dart';
+import 'token_manager.dart';
 import '../config/app_config.dart';
 
 class WebSocketService {
@@ -16,7 +17,14 @@ class WebSocketService {
     // For now, WebSocket endpoint doesn't require auth token
 
     // Get WebSocket URL from config
-    final url = AppConfig.getWsUrl(attemptId, questionId);
+    var url = AppConfig.getWsUrl(attemptId, questionId);
+    
+    // Add auth token
+    final token = await TokenManager.tokenProvider?.call();
+    if (token != null) {
+      final separator = url.contains('?') ? '&' : '?';
+      url = '$url${separator}token=$token';
+    }
     
     print('WebSocket connecting to: $url'); // Debug log
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'page_template.dart';
-import '../ui/ui.dart';
+import '../widgets/widgets.dart';
 
 class OptionsEditorPage extends StatelessWidget {
   const OptionsEditorPage({super.key});

@@ -250,6 +250,7 @@ class CompositeQuestion {
   final String? canonicalId;
   final String? title;
   final String? description;
+  final String? explanation;
   final AnswerType answerType;
   final Map<String, dynamic> scoring;
   final int? difficulty;
@@ -267,6 +268,7 @@ class CompositeQuestion {
     this.canonicalId,
     this.title,
     this.description,
+    this.explanation,
     this.answerType = AnswerType.options,
     Map<String, dynamic>? scoring,
     this.difficulty,
@@ -284,11 +286,21 @@ class CompositeQuestion {
         metadata = metadata ?? {};
 
   factory CompositeQuestion.fromJson(Map<String, dynamic> json) {
+    // Handle explanation from different possible keys
+    String? expl;
+    if (json['explanation'] != null) {
+      expl = json['explanation'].toString();
+    } else if (json['question_explanation'] != null) {
+      // Sometimes it comes as question_explanation in flat structures
+      expl = json['question_explanation'].toString();
+    }
+
     return CompositeQuestion(
       id: json['id']?.toString() ?? '',
       canonicalId: json['canonical_id']?.toString(),
-      title: json['title']?.toString(),
-      description: json['description']?.toString(),
+      title: json['title']?.toString() ?? json['question_title']?.toString(),
+      description: json['description']?.toString() ?? json['question_description']?.toString(),
+      explanation: expl,
       answerType: AnswerType.fromString(json['answer_type']?.toString() ?? 'options'),
       scoring: (json['scoring'] as Map<String, dynamic>?) ?? {},
       difficulty: _parseInt(json['difficulty']),
@@ -308,6 +320,7 @@ class CompositeQuestion {
         'canonical_id': canonicalId,
         'title': title,
         'description': description,
+        'explanation': explanation,
         'answer_type': answerType.name,
         'scoring': scoring,
         'difficulty': difficulty,
